@@ -228,7 +228,7 @@ class Sling extends Component {
           timeBeforeNextMarker = 0;
           timeMarker = timeStamp
         }
-        setTimeout( () =>  { this.setState({ challengerText : this.state.topScore[timeStamps] }) } , timeBeforeNextMarker * 1000 );
+        setTimeout( () =>  { this.setState({ challengerText : this.state.topScore[timeStamp] }) } , timeBeforeNextMarker * 1000 );
       }
 
     }
@@ -293,3 +293,16 @@ class Sling extends Component {
 }
 
 export default Sling;
+
+
+// have to check if the time recorded on challenge against bot 
+//  if your time < bot time
+//  your time is now the highest score  => replace the tiemstamp ovbject with the current one
+// while sending down the timestamp object =>  
+
+// const payload = {
+//  totalTime: this.state.endTime - this.state.startTime,
+//  email :  ??,
+//  challengeID: ??
+//  bot: this.state.record
+//}
