@@ -1,0 +1,13 @@
+language: node_js
+node_js:
+- 'static'
+install:
+- yarn
+- yarn buildEnv
+- yarn setup:server
+- yarn setup:client
+script:
+- yarn build &
+- sleep 10
+- yarn start:server &
+- sleep 10
