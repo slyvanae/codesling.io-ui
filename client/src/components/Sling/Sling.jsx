@@ -28,7 +28,178 @@ class Sling extends Component {
       startTime: "",
       endTime: "",
       recording: false,
-      topScore: {
+      topScore: ''
+    };
+  }
+
+  componentDidMount() {
+    const { socket, challenge } = this.props;
+    const startChall =
+      typeof challenge === "string" ? JSON.parse(challenge) : {};
+    socket.on("connect", () => {
+      socket.emit("client.ready", startChall);
+    });
+
+    socket.on("server.initialState", ({ id, text, challenge }) => {
+      this.setState({
+        id,
+        ownerText: text,
+        startingText: text,
+        challengerText: text,
+        challenge
+      });
+    });
+
+    socket.on("server.changed", ({ text, email }) => {
+      if (localStorage.getItem("email") === email) {
+        this.setState({ ownerText: text });
+      } else {
+        this.setState({ challengerText: text });
+      }
+    });
+
+    socket.on("server.run", ({ stdout, email }) => {
+      const ownerEmail = localStorage.getItem("email");
+      email === ownerEmail ? this.setState({ stdout }) : null;
+    });
+
+    window.addEventListener("resize", this.setEditorSize);
+  }
+
+  submitCode = () => {
+    const { socket } = this.props;
+    const { ownerText } = this.state;
+    const email = localStorage.getItem("email");
+    socket.emit("client.run", { text: ownerText, email });
+    // if passes test cases
+    this.setState({
+      recording: false,
+      endTime: Date.now()
+    });
+  };
+
+  handleChange = throttle((editor, metadata, value) => {
+    const email = localStorage.getItem("email");
+    this.props.socket.emit("client.update", { text: value, email });
+
+    this.state.recording
+      ? (this.state.record[
+          (Date.now() - this.state.startTime) / 1000
+        ] = this.state.ownerText)
+      : null;
+  }, 250);
+
+  setEditorSize = throttle(() => {
+    this.editor.setSize(null, `${window.innerHeight - 80}px`);
+  }, 100);
+
+  initializeEditor = editor => {
+    this.editor = editor;
+    this.setEditorSize();
+  };
+
+  onRecordChange = () => {
+    if (!this.state.startTime) {
+      // setTimeout( () => {
+      this.setState({
+        startTime: Date.now(),
+        recording: true,
+        ownerText: this.state.startingText,
+        challengerText: this.state.startingText,
+        record: {}
+      });
+      //   }, 3000
+      // )
+
+      var timeMarker = null;
+      var timeBeforeNextMarker = null;
+
+      for(let timeStamp in this.state.topScore) {
+        if (timeMarker) {
+          timeBeforeNextMarker = timeStamp - timeMarker
+        } else {
+          timeBeforeNextMarker = 0;
+          timeMarker = timeStamp
+        }
+        setTimeout( () =>  { this.setState({ challengerText : this.state.topScore[timeStamp] }) } , timeBeforeNextMarker * 1000 );
+      }
+
+    }
+  };
+
+  render() {
+    const { socket } = this.props;
+    return (
+      <div className="sling-container">
+        <EditorHeader />
+        <div className="code1-editor-container">
+          <CodeMirror
+            editorDidMount={this.initializeEditor}
+            value={this.state.ownerText}
+            options={{
+              mode: "javascript",
+              lineNumbers: true,
+              theme: "base16-dark"
+            }}
+            onChange={this.handleChange}
+          />
+        </div>
+        <div className="stdout-container">
+          <Button
+            className="run-btn"
+            text="Duel the TOP SCORER"
+            backgroundColor="red"
+            color="white"
+            onClick={() => this.onRecordChange()}
+          />
+          <Button
+            className="run-btn"
+            text="Run Code"
+            backgroundColor="red"
+            color="white"
+            onClick={() => this.submitCode()}
+          />
+          {this.state.challenge.title || this.props.challenge.title}
+          <br />
+          {this.state.challenge.content || this.props.challenge.content}
+          <Stdout text={this.state.stdout} />
+        </div>
+        <div className="code2-editor-container">
+          <CodeMirror
+            editorDidMount={this.initializeEditor}
+            value={this.state.challengerText}
+            options={{
+              mode: "javascript",
+              lineNumbers: true,
+              theme: "base16-dark",
+              readOnly: true
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+}
+
+export default Sling;
+
+
+// have to check if the time recorded on challenge against bot 
+//  if your time < bot time
+//  your time is now the highest score  => replace the tiemstamp ovbject with the current one
+// while sending down the timestamp object =>  
+
+// const payload = {
+//  totalTime: this.state.endTime - this.state.startTime,
+//  email :  ??,
+//  challengeID: ??
+//  bot: this.state.record
+//}
+
+
+
+
+/*{
         "1.325": "function sum ( array ) {\n\n}\n\nconsole.log(sum([1,2,3]));",
         "1.576": "function sum ( array ) {\n \n}\n\nconsole.log(sum([1,2,3]));",
         "2.923":
@@ -135,174 +306,4 @@ class Sling extends Component {
           "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum += el;\n  })\n  return su\n}\n\nconsole.log(sum([1,2,3]));",
         "19.317":
           "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum += el;\n  })\n  return sum\n}\n\nconsole.log(sum([1,2,3]));"
-      }
-    };
-  }
-
-  componentDidMount() {
-    const { socket, challenge } = this.props;
-    const startChall =
-      typeof challenge === "string" ? JSON.parse(challenge) : {};
-    socket.on("connect", () => {
-      socket.emit("client.ready", startChall);
-    });
-
-    socket.on("server.initialState", ({ id, text, challenge }) => {
-      this.setState({
-        id,
-        ownerText: text,
-        startingText: text,
-        challengerText: text,
-        challenge
-      });
-    });
-
-    socket.on("server.changed", ({ text, email }) => {
-      if (localStorage.getItem("email") === email) {
-        this.setState({ ownerText: text });
-      } else {
-        this.setState({ challengerText: text });
-      }
-    });
-
-    socket.on("server.run", ({ stdout, email }) => {
-      const ownerEmail = localStorage.getItem("email");
-      email === ownerEmail ? this.setState({ stdout }) : null;
-    });
-
-    window.addEventListener("resize", this.setEditorSize);
-  }
-
-  submitCode = () => {
-    const { socket } = this.props;
-    const { ownerText } = this.state;
-    const email = localStorage.getItem("email");
-    socket.emit("client.run", { text: ownerText, email });
-    // if passes test cases
-    this.setState({
-      recording: false,
-      endTime: Date.now()
-    });
-  };
-
-  handleChange = throttle((editor, metadata, value) => {
-    const email = localStorage.getItem("email");
-    this.props.socket.emit("client.update", { text: value, email });
-
-    this.state.recording
-      ? (this.state.record[
-          (Date.now() - this.state.startTime) / 1000
-        ] = this.state.ownerText)
-      : null;
-  }, 250);
-
-  setEditorSize = throttle(() => {
-    this.editor.setSize(null, `${window.innerHeight - 80}px`);
-  }, 100);
-
-  initializeEditor = editor => {
-    this.editor = editor;
-    this.setEditorSize();
-  };
-
-  onRecordChange = () => {
-    if (!this.state.startTime) {
-      // setTimeout( () => {
-      this.setState({
-        startTime: Date.now(),
-        recording: true,
-        ownerText: this.state.startingText,
-        challengerText: this.state.startingText,
-        record: {}
-      });
-      //   }, 3000
-      // )
-
-      var timeMarker = null;
-      var timeBeforeNextMarker = null;
-
-      for(let timeStamp in this.state.topScore) {
-        if (timeMarker) {
-          timeBeforeNextMarker = timeStamp - timeMarker
-        } else {
-          timeBeforeNextMarker = 0;
-          timeMarker = timeStamp
-        }
-        setTimeout( () =>  { this.setState({ challengerText : this.state.topScore[timeStamp] }) } , timeBeforeNextMarker * 1000 );
-      }
-
-    }
-  };
-
-  render() {
-    let str = JSON.stringify(this.state.record);
-    console.log(this.state);
-    console.log(str);
-    console.log(JSON.parse(str));
-    const { socket } = this.props;
-    return (
-      <div className="sling-container">
-        <EditorHeader />
-        <div className="code1-editor-container">
-          <CodeMirror
-            editorDidMount={this.initializeEditor}
-            value={this.state.ownerText}
-            options={{
-              mode: "javascript",
-              lineNumbers: true,
-              theme: "base16-dark"
-            }}
-            onChange={this.handleChange}
-          />
-        </div>
-        <div className="stdout-container">
-          <Button
-            className="run-btn"
-            text="Duel the TOP SCORER"
-            backgroundColor="red"
-            color="white"
-            onClick={() => this.onRecordChange()}
-          />
-          <Button
-            className="run-btn"
-            text="Run Code"
-            backgroundColor="red"
-            color="white"
-            onClick={() => this.submitCode()}
-          />
-          {this.state.challenge.title || this.props.challenge.title}
-          <br />
-          {this.state.challenge.content || this.props.challenge.content}
-          <Stdout text={this.state.stdout} />
-        </div>
-        <div className="code2-editor-container">
-          <CodeMirror
-            editorDidMount={this.initializeEditor}
-            value={this.state.challengerText}
-            options={{
-              mode: "javascript",
-              lineNumbers: true,
-              theme: "base16-dark",
-              readOnly: true
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
-}
-
-export default Sling;
-
-
-// have to check if the time recorded on challenge against bot 
-//  if your time < bot time
-//  your time is now the highest score  => replace the tiemstamp ovbject with the current one
-// while sending down the timestamp object =>  
-
-// const payload = {
-//  totalTime: this.state.endTime - this.state.startTime,
-//  email :  ??,
-//  challengeID: ??
-//  bot: this.state.record
-//}
+      }*/
