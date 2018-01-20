@@ -9,7 +9,32 @@
   @media (min-width: 768px) {
     .sling-container {
       grid-template-columns: 33% 33% 33%;
-      grid-template-areas: "header header header" "code1   stdout   code2"; } }
+      grid-template-areas: "header header header"
+                         "code1   stdout   code2"; } }
+
+.mirror {
+  max-height: 50%; 
+  background: #FFF;
+  overflow-y: scroll;
+  cursor: text;
+  grid-area: code1; 
+}
+
+.message {
+  border-color:red;
+  border-width: 5px; 
+  max-height: 50%;
+  background: #FFF;
+  overflow-y: scroll;
+  cursor: text;
+  grid-area: code1; 
+}
+
+.button {
+  max-height: 10%; 
+  background: #FFF;
+
+}
 
 .code1-editor-container {
   max-height: 100%;
@@ -26,7 +51,8 @@
   grid-area: code2; }
 
 .stdout-container {
-  grid-area: stdout; }
+  grid-area: stdout; 
+  max-height: 25%;}
 
 .editor-header {
   grid-area: header; }
