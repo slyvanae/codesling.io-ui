@@ -8,10 +8,13 @@ import Stdout from "./StdOut/index.jsx";
 import EditorHeader from "./EditorHeader";
 import Button from "../globals/Button";
 
-import "codemirror/mode/javascript/javascript.js";
-import "codemirror/lib/codemirror.css";
-import "codemirror/theme/base16-dark.css";
-import "./Sling.css";
+import 'codemirror/mode/javascript/javascript.js';
+import 'codemirror/lib/codemirror.css';
+import 'codemirror/theme/base16-dark.css';
+import './Sling.css';
+import Message from '../Message/Message.jsx';
+import MessageBox from '../MessageBox/MessageBox.jsx'; 
+import Test from '../Tests/Test.jsx'
 
 class Sling extends Component {
   constructor() {
@@ -28,8 +31,14 @@ class Sling extends Component {
       startTime: "",
       endTime: "",
       recording: false,
-      topScore: null
-    };
+      topScore: null,
+      input: '', 
+      output: ''
+    }
+
+    this.handleInputChange = this.handleInputChange.bind(this); 
+    this.handleOutputChange = this.handleOutputChange.bind(this); 
+    this.addTestCase = this.addTestCase.bind(this); 
   }
 
   componentDidMount() {
@@ -81,8 +90,10 @@ class Sling extends Component {
   submitCode = () => {
     const { socket } = this.props;
     const { ownerText } = this.state;
-    const email = localStorage.getItem("email");
-    socket.emit("client.run", { text: ownerText, email });
+    const { input } = this.state; 
+    const { output } = this.state; 
+    const email = localStorage.getItem('email');
+    socket.emit('client.run', { text: ownerText, email, input, output });
     // if test cases pass
     // run below
     this.setState({
@@ -132,6 +143,7 @@ class Sling extends Component {
         } 
       }          
   };
+ 
 
   handleChange = throttle((editor, metadata, value) => {
     const email = localStorage.getItem("email");
@@ -146,8 +158,8 @@ class Sling extends Component {
   }, 250);
 
   setEditorSize = throttle(() => {
-    this.editor.setSize(null, `${window.innerHeight - 80}px`);
-  }, 100);
+    this.editor.setSize(null, `${window.innerHeight - 70}px`);
+  }, 60);
 
   initializeEditor = editor => {
     this.editor = editor;
@@ -186,6 +198,23 @@ class Sling extends Component {
     }
   };
 
+  addTestCase() {
+    //add test case to database
+  console.log(this.state); 
+  }
+
+  handleInputChange(e) {
+    this.setState({
+        input: e.target.value
+    }); 
+  }
+
+  handleOutputChange(e) {
+  this.setState({
+      output: e.target.value
+  }); 
+  }
+
   render() {
     console.log("this.state for sling", this.state);
     const { socket } = this.props;
@@ -193,7 +222,7 @@ class Sling extends Component {
       <div className="sling-container">
         <EditorHeader />
         <div className="code1-editor-container">
-          <CodeMirror
+          <CodeMirror className="mirror"
             editorDidMount={this.initializeEditor}
             value={this.state.ownerText}
             options={{
@@ -202,7 +231,8 @@ class Sling extends Component {
               theme: "base16-dark"
             }}
             onChange={this.handleChange}
-          />
+            />
+            <MessageBox className="message" socket={this.props.socket} />
         </div>
         <div className="stdout-container">
           <Button
@@ -212,6 +242,10 @@ class Sling extends Component {
             color="white"
             onClick={() => this.onDuelClick()}
           />
+            {this.state.challenge.title || this.props.challenge.title}
+            <br/>
+            {this.state.challenge.content || this.props.challenge.content}
+          <Stdout text={this.state.stdout} socket={this.props.socket}/>
           <Button
             className="run-btn"
             text="Run Code"
@@ -219,13 +253,14 @@ class Sling extends Component {
             color="white"
             onClick={() => this.submitCode()}
           />
-          {this.state.challenge.title || this.props.challenge.title}
-          <br />
-          {this.state.challenge.content || this.props.challenge.content}
-          <Stdout text={this.state.stdout} />
+          <Test socket={this.props.socket}
+          handleInputChange={this.handleInputChange}
+          handleOutputChange={this.handleOutputChange}
+          addTestCase={this.addTestCase}/> 
+          <Message className="message" socket={this.props.socket}/>
         </div>
         <div className="code2-editor-container">
-          <CodeMirror
+          <CodeMirror className="mirror"
             editorDidMount={this.initializeEditor}
             value={this.state.challengerText}
             options={{

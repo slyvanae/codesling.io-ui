@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 import io from 'socket.io-client/dist/socket.io.js';
-
 import Sling from './Sling.jsx';
 
 class SlingIndex extends Component {
