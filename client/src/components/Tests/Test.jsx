@@ -21,15 +21,31 @@ class Test extends Component {
   clearInput() {
     this.refs.input.value=""; 
     this.refs.output.value=""; 
-    this.props.addTestCase(); 
+    this.props.addTestCase();
   }
 
   render() {
     return (
       <div>
         Test Cases: 
-        <div> Input: <input  ref="input" onChange={this.props.handleInputChange}/> </div>
-        <div> Output: <input ref="output" onChange={this.props.handleOutputChange}/> </div>
+        <div> Input: <input  ref="input" onChange={this.props.handleInputChange}/>
+         <select 
+            onChange={this.props.handleInputTypeChange}>
+            <option value="integer">Integer</option>
+            <option value="array">Array</option>
+            <option selected value="string">String</option>
+            <option value="boolean">Boolean</option>
+        </select>
+        </div>
+        <div> Output: <input ref="output" onChange={this.props.handleOutputChange}/>
+         <select 
+            onChange={this.props.handleOutputTypeChange}>
+            <option value="integer">Integer</option>
+            <option value="array">Array</option>
+            <option selected value="string">String</option>
+            <option value="boolean">Boolean</option>
+        </select>
+        </div>
         <Button
         className="run-btn"
         text="Add Test Case"
