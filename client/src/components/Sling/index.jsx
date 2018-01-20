@@ -21,7 +21,7 @@ class SlingIndex extends Component {
   render() {
     if (this.props.location.state) {
       return (
-        <Sling socket={this.state.socket} challenge={this.props.location.state.challenge}/>
+        <Sling socket={this.state.socket} challenge={this.props.location.state.challenge} history={this.props.history} location={this.props.location}/>
       );
     } else {
       return (

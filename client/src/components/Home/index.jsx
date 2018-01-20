@@ -30,7 +30,8 @@ class Home extends Component {
     this.props.history.push({
       pathname: `/${slingId}`,
       state: {
-        challenge: this.state.selectedChallenge
+        challenge: this.state.selectedChallenge,
+        challengeId: this.state.selectedChallenge.id
       }
     });
   }
@@ -46,6 +47,8 @@ class Home extends Component {
   }
 
   render() {
+    console.log('Props for home', this.props);
+    console.log('State for home', this.state);
     return (
       <div className="landing-page-container">
         <Logo

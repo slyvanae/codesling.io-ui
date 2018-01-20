@@ -28,11 +28,12 @@ class Sling extends Component {
       startTime: "",
       endTime: "",
       recording: false,
-      topScore: ''
+      topScore: null
     };
   }
 
   componentDidMount() {
+    console.log(this.props, 'fuckyou')
     const { socket, challenge } = this.props;
     const startChall =
       typeof challenge === "string" ? JSON.parse(challenge) : {};
@@ -46,7 +47,7 @@ class Sling extends Component {
         ownerText: text,
         startingText: text,
         challengerText: text,
-        challenge
+        challenge,
       });
     });
 
@@ -63,6 +64,17 @@ class Sling extends Component {
       email === ownerEmail ? this.setState({ stdout }) : null;
     });
 
+    let chal = JSON.parse(this.props.challenge)
+    axios.post('http://localhost:3396/api/challenges/currentTopScore', { challengeId: chal.id })
+      .then( (res) => {
+        this.setState({
+          topScore: res.data
+        })
+      })
+      .catch( err => {
+        console.log(err);
+      })
+
     window.addEventListener("resize", this.setEditorSize);
   }
 
@@ -71,11 +83,54 @@ class Sling extends Component {
     const { ownerText } = this.state;
     const email = localStorage.getItem("email");
     socket.emit("client.run", { text: ownerText, email });
-    // if passes test cases
+    // if test cases pass
+    // run below
     this.setState({
       recording: false,
       endTime: Date.now()
     });
+    console.log("start", this.state.startTime);
+    let ended = Date.now();
+    let overallTime = ended - this.state.startTime;
+
+
+    console.log("overallTime", overallTime);
+    
+    const payload = {
+      contents: this.state.record,
+      challengeId: this.state.challenge.id,
+      email,
+      time: overallTime
+    };
+    if ( !this.state.topScore ) {
+      axios
+        .post("http://localhost:3396/api/challenges/addTopScore", payload)
+        .then(res => {
+          this.setState({
+            topScore: res.data,
+            recording: false,
+            endTime: ended
+          });
+        })
+        .catch(err => {
+          console.log(err);
+        });
+      } else {
+        if ( overallTime < this.state.topScore.time ) {
+          axios.put("http://localhost:3396/api/challenges/newTopScore", payload)
+            .then(res => {
+              console.log('updated', res)
+              // this.setState({
+              //   topScore: res.data,
+              //   recording: false,
+              //   endTime: ended
+              // });
+            })
+            .catch(err => {
+              console.log(err);
+            });
+        } 
+      }          
   };
 
   handleChange = throttle((editor, metadata, value) => {
@@ -87,6 +142,7 @@ class Sling extends Component {
           (Date.now() - this.state.startTime) / 1000
         ] = this.state.ownerText)
       : null;
+
   }, 250);
 
   setEditorSize = throttle(() => {
@@ -98,7 +154,7 @@ class Sling extends Component {
     this.setEditorSize();
   };
 
-  onRecordChange = () => {
+  onDuelClick = () => {
     if (!this.state.startTime) {
       // setTimeout( () => {
       this.setState({
@@ -109,25 +165,29 @@ class Sling extends Component {
         record: {}
       });
       //   }, 3000
-      // )
+      // )1
 
-      var timeMarker = null;
-      var timeBeforeNextMarker = null;
-
-      for(let timeStamp in this.state.topScore) {
-        if (timeMarker) {
-          timeBeforeNextMarker = timeStamp - timeMarker
-        } else {
-          timeBeforeNextMarker = 0;
-          timeMarker = timeStamp
+      if ( this.state.topScore ) {
+        var timeMarker = null;
+        var timeBeforeNextMarker = null;
+  
+        for (let timeStamp in this.state.topScore.contents) {
+          if (timeMarker) {
+            timeBeforeNextMarker = timeStamp - timeMarker;
+          } else {
+            timeBeforeNextMarker = 0;
+            timeMarker = timeStamp;
+          }
+          setTimeout(() => {
+            this.setState({ challengerText: this.state.topScore.contents[timeStamp] });
+          }, timeBeforeNextMarker * 1000);
         }
-        setTimeout( () =>  { this.setState({ challengerText : this.state.topScore[timeStamp] }) } , timeBeforeNextMarker * 1000 );
       }
-
     }
   };
 
   render() {
+    console.log("this.state for sling", this.state);
     const { socket } = this.props;
     return (
       <div className="sling-container">
@@ -150,7 +210,7 @@ class Sling extends Component {
             text="Duel the TOP SCORER"
             backgroundColor="red"
             color="white"
-            onClick={() => this.onRecordChange()}
+            onClick={() => this.onDuelClick()}
           />
           <Button
             className="run-btn"
@@ -183,11 +243,10 @@ class Sling extends Component {
 
 export default Sling;
 
-
-// have to check if the time recorded on challenge against bot 
+// have to check if the time recorded on challenge against bot
 //  if your time < bot time
 //  your time is now the highest score  => replace the tiemstamp ovbject with the current one
-// while sending down the timestamp object =>  
+// while sending down the timestamp object =>
 
 // const payload = {
 //  totalTime: this.state.endTime - this.state.startTime,
@@ -195,115 +254,3 @@ export default Sling;
 //  challengeID: ??
 //  bot: this.state.record
 //}
-
-
-
-
-/*{
-        "1.325": "function sum ( array ) {\n\n}\n\nconsole.log(sum([1,2,3]));",
-        "1.576": "function sum ( array ) {\n \n}\n\nconsole.log(sum([1,2,3]));",
-        "2.923":
-          "function sum ( array ) {\n  \n}\n\nconsole.log(sum([1,2,3]));",
-        "3.176":
-          "function sum ( array ) {\n  v\n}\n\nconsole.log(sum([1,2,3]));",
-        "3.443":
-          "function sum ( array ) {\n  var\n}\n\nconsole.log(sum([1,2,3]));",
-        "3.728":
-          "function sum ( array ) {\n  var su\n}\n\nconsole.log(sum([1,2,3]));",
-        "3.978":
-          "function sum ( array ) {\n  var sum =\n}\n\nconsole.log(sum([1,2,3]));",
-        "4.231":
-          "function sum ( array ) {\n  var sum = \n}\n\nconsole.log(sum([1,2,3]));",
-        "4.551":
-          "function sum ( array ) {\n  var sum = 0\n}\n\nconsole.log(sum([1,2,3]));",
-        "4.576":
-          "function sum ( array ) {\n  var sum = 0;\n}\n\nconsole.log(sum([1,2,3]));",
-        "4.831":
-          "function sum ( array ) {\n  var sum = 0;\n  \n}\n\nconsole.log(sum([1,2,3]));",
-        "5.982":
-          "function sum ( array ) {\n  var sum = 0;\n  \n}\n\nconsole.log(sum([1,2,3]));",
-        "6.234":
-          "function sum ( array ) {\n  var sum = 0;\n  a\n}\n\nconsole.log(sum([1,2,3]));",
-        "6.484":
-          "function sum ( array ) {\n  var sum = 0;\n  arr\n}\n\nconsole.log(sum([1,2,3]));",
-        "6.927":
-          "function sum ( array ) {\n  var sum = 0;\n  array.\n}\n\nconsole.log(sum([1,2,3]));",
-        "7.416":
-          "function sum ( array ) {\n  var sum = 0;\n  array.F\n}\n\nconsole.log(sum([1,2,3]));",
-        "7.667":
-          "function sum ( array ) {\n  var sum = 0;\n  array.\n}\n\nconsole.log(sum([1,2,3]));",
-        "7.984":
-          "function sum ( array ) {\n  var sum = 0;\n  array.fo\n}\n\nconsole.log(sum([1,2,3]));",
-        "8.143":
-          "function sum ( array ) {\n  var sum = 0;\n  array.for\n}\n\nconsole.log(sum([1,2,3]));",
-        "8.394":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forE\n}\n\nconsole.log(sum([1,2,3]));",
-        "8.649":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEac\n}\n\nconsole.log(sum([1,2,3]));",
-        "8.904":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach\n}\n\nconsole.log(sum([1,2,3]));",
-        "9.519":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach(\n}\n\nconsole.log(sum([1,2,3]));",
-        "9.77":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( \n}\n\nconsole.log(sum([1,2,3]));",
-        "10.018":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el\n}\n\nconsole.log(sum([1,2,3]));",
-        "10.334":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el=\n}\n\nconsole.log(sum([1,2,3]));",
-        "10.586":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el\n}\n\nconsole.log(sum([1,2,3]));",
-        "10.813":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el =\n}\n\nconsole.log(sum([1,2,3]));",
-        "11.065":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el =>\n}\n\nconsole.log(sum([1,2,3]));",
-        "11.44":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => \n}\n\nconsole.log(sum([1,2,3]));",
-        "11.948":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n}\n\nconsole.log(sum([1,2,3]));",
-        "12.201":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n  \n}\n\nconsole.log(sum([1,2,3]));",
-        "12.218":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n  \n}\n\nconsole.log(sum([1,2,3]));",
-        "12.471":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n  \n  \n}\n\nconsole.log(sum([1,2,3]));",
-        "13.117":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n  \n  }\n}\n\nconsole.log(sum([1,2,3]));",
-        "14.179":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n  \n  })\n}\n\nconsole.log(sum([1,2,3]));",
-        "14.43":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n   \n  })\n}\n\nconsole.log(sum([1,2,3]));",
-        "14.7":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    \n  })\n}\n\nconsole.log(sum([1,2,3]));",
-        "14.955":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    su\n  })\n}\n\nconsole.log(sum([1,2,3]));",
-        "15.208":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum\n  })\n}\n\nconsole.log(sum([1,2,3]));",
-        "15.279":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum \n  })\n}\n\nconsole.log(sum([1,2,3]));",
-        "15.532":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum +\n  })\n}\n\nconsole.log(sum([1,2,3]));",
-        "15.807":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum +=\n  })\n}\n\nconsole.log(sum([1,2,3]));",
-        "16.334":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum += \n  })\n}\n\nconsole.log(sum([1,2,3]));",
-        "16.585":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum += e\n  })\n}\n\nconsole.log(sum([1,2,3]));",
-        "16.837":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum += el\n  })\n}\n\nconsole.log(sum([1,2,3]));",
-        "17.723":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum += el;\n  })\n}\n\nconsole.log(sum([1,2,3]));",
-        "17.975":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum += el;\n  })\n  \n}\n\nconsole.log(sum([1,2,3]));",
-        "18.132":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum += el;\n  })\n  \n}\n\nconsole.log(sum([1,2,3]));",
-        "18.384":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum += el;\n  })\n  r\n}\n\nconsole.log(sum([1,2,3]));",
-        "18.641":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum += el;\n  })\n  ret\n}\n\nconsole.log(sum([1,2,3]));",
-        "18.892":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum += el;\n  })\n  return \n}\n\nconsole.log(sum([1,2,3]));",
-        "19.144":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum += el;\n  })\n  return su\n}\n\nconsole.log(sum([1,2,3]));",
-        "19.317":
-          "function sum ( array ) {\n  var sum = 0;\n  array.forEach( el => {\n    sum += el;\n  })\n  return sum\n}\n\nconsole.log(sum([1,2,3]));"
-      }*/
