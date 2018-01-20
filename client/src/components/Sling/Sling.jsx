@@ -33,12 +33,18 @@ class Sling extends Component {
       recording: false,
       topScore: null,
       input: '', 
-      output: ''
+      output: '', 
+      outputValue: 'string', 
+      inputValue: 'string', 
+      challengeDone: false, 
+      finalScore: ''
     }
 
     this.handleInputChange = this.handleInputChange.bind(this); 
     this.handleOutputChange = this.handleOutputChange.bind(this); 
     this.addTestCase = this.addTestCase.bind(this); 
+    this.handleOutputTypeChange = this.handleOutputTypeChange.bind(this); 
+    this.handleInputTypeChange = this.handleInputTypeChange.bind(this); 
   }
 
   componentDidMount() {
@@ -68,12 +74,22 @@ class Sling extends Component {
       }
     });
 
-    socket.on("server.run", ({ stdout, email }) => {
+    socket.on("server.run", ({ stdout, email, score, passed }) => {
+
       const ownerEmail = localStorage.getItem("email");
-      email === ownerEmail ? this.setState({ stdout }) : null;
+      email === ownerEmail ? this.setState({ stdout: stdout + this.state.finalScore }) : this.state.finalScore;
+      if (!this.state.challengeDone) {
+        this.setState({
+          stdout: this.state.stdout + score, 
+          finalScore: score
+        })
+      }
+      if (passed) {
+        this.setState({challengeDone: true})
+      }
     });
 
-    let chal = JSON.parse(this.props.challenge)
+    let chal = (this.props.challenge)
     axios.post('http://localhost:3396/api/challenges/currentTopScore', { challengeId: chal.id })
       .then( (res) => {
         this.setState({
@@ -92,20 +108,18 @@ class Sling extends Component {
     const { ownerText } = this.state;
     const { input } = this.state; 
     const { output } = this.state; 
+    const { outputValue } = this.state; 
+    const { inputValue } = this.state; 
     const email = localStorage.getItem('email');
-    socket.emit('client.run', { text: ownerText, email, input, output });
+    socket.emit('client.run', { text: ownerText, email, input, output, outputValue, inputValue });
     // if test cases pass
     // run below
     this.setState({
       recording: false,
       endTime: Date.now()
     });
-    console.log("start", this.state.startTime);
     let ended = Date.now();
     let overallTime = ended - this.state.startTime;
-
-
-    console.log("overallTime", overallTime);
     
     const payload = {
       contents: this.state.record,
@@ -200,7 +214,7 @@ class Sling extends Component {
 
   addTestCase() {
     //add test case to database
-  console.log(this.state); 
+    //render it?   
   }
 
   handleInputChange(e) {
@@ -212,11 +226,22 @@ class Sling extends Component {
   handleOutputChange(e) {
   this.setState({
       output: e.target.value
-  }); 
+    }); 
+  }
+
+  handleOutputTypeChange(e) {
+    this.setState({
+      outputValue: e.target.value
+    })
+  }
+
+  handleInputTypeChange(e) {
+    this.setState({
+      inputValue: e.target.value
+    })
   }
 
   render() {
-    console.log("this.state for sling", this.state);
     const { socket } = this.props;
     return (
       <div className="sling-container">
@@ -256,7 +281,9 @@ class Sling extends Component {
           <Test socket={this.props.socket}
           handleInputChange={this.handleInputChange}
           handleOutputChange={this.handleOutputChange}
-          addTestCase={this.addTestCase}/> 
+          addTestCase={this.addTestCase}
+          handleOutputTypeChange={this.handleOutputTypeChange} 
+          handleInputTypeChange={this.handleInputTypeChange}/> 
           <Message className="message" socket={this.props.socket}/>
         </div>
         <div className="code2-editor-container">
